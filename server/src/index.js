@@ -35,6 +35,9 @@ async function getAllAnimals() {
   // It takes in one parameter: a SQL query!
   const data = await db.query("SELECT * FROM animals ORDER BY id ASC");
   return data.rows; // we have to use dot notation to get value of the rows property from the data object
+
+  //***added from recording notes but not provided in slack code?
+  //   console.log(data.rows)
 }
 
 // 2. getOneAnimalByName(name)
@@ -44,13 +47,27 @@ async function getOneAnimalByName(name) {
   return data.rows[0];
 }
 
-// 3. getOneAnimalById(id)
+// 3. getOneAnimalById(id) - added, check and rewatch
 
-// 4. getNewestAnimal()
+async function getOneAnimalById(id) {
+  const data = await db.query("SELECT * FROM animals WHERE id = $1", [id]);
+  return data.rows[0];
+}
 
-// 5. deleteOneAnimal(id)
+// 4. getNewestAnimal() - added, check and rewatch
 
-// 6. addOneAnimal(name, category, can_fly, lives_in)
+async function getNewestAnimal() {
+  const data = await db.query("SELECT * FROM animals ORDER BY id DESC LIMIT 1");
+  return data.rows[0];
+}
+
+// 5. deleteOneAnimal(id) - added, check and rewatch
+
+async function deleteOneAnimal(id) {
+  await db.query("DELETE FROM animals WHERE id = $1", [id]);
+}
+
+// 6. addOneAnimal(name, category, can_fly, lives_in) - added, check and rewatch
 
 async function addOneAnimal(name, category, can_fly, lives_in) {
   // we declared db in our boilerplate code, which connects us to the SQL database
@@ -71,6 +88,13 @@ async function updateOneAnimalName(id, newName) {
 }
 
 // 8. updateOneAnimalCategory(id, newCategory)
+
+async function updateOneAnimalCategory(id, newCategory) {
+  await db.query("UPDATE animals SET category = $1 WHERE id = $2", [
+    newCategory,
+    id,
+  ]);
+}
 
 // ---------------------------------
 // API Endpoints
@@ -93,9 +117,26 @@ app.get("/get-one-animal-by-name/:name", async (req, res) => {
 
 // 3. GET /get-one-animal-by-id/:id
 
+app.get("/get-one-animal-by-id/:id", async (req, res) => {
+  let id = req.params.id;
+  const animal = await getOneAnimalById(id);
+  res.json(animal);
+});
+
 // 4. GET /get-newest-animal
 
+app.get("/get-newest-animal", async (req, res) => {
+  const animal = await getNewestAnimal();
+  res.json(animal);
+});
+
 // 5. POST /delete-one-animal/:id
+
+app.post("/delete-one-animal/:id", async (req, res) => {
+  let id = req.params.id;
+  await deleteOneAnimal(id);
+  res.send(`Animal with id number ${id} has been deleted`);
+});
 
 // 6. POST /add-one-animal
 
@@ -151,3 +192,13 @@ app.post("/update-one-animal-name-with-error-handling", async (req, res) => {
 });
 
 // 8. POST /update-one-animal-category
+
+app.post("/update-one-animal-category", async (req, res) => {
+  const { id, newCategory } = req.body;
+  if (!id || !newCategory) {
+    return res.status(400).send("Error: Missing required fields");
+  }
+
+  await updateOneAnimalCategory(id, newCategory);
+  res.send(`Success! The animal's category was updated`);
+});
